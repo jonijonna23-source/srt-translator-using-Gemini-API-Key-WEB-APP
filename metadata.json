@@ -1,0 +1,5 @@
+{
+  "name": "Gemini SRT Translator",
+  "description": "A professional tool to translate subtitle files (.srt) using Google Gemini AI, featuring batch processing and real-time progress tracking.",
+  "requestFramePermissions": []
+}
