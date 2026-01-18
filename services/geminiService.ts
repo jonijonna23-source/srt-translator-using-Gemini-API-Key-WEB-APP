@@ -1,62 +1,38 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
-import { SrtEntry } from "../types";
 
-// Fungsi tambahan untuk memberikan jeda (delay)
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
 export const translateBatch = async (
-  entries: SrtEntry[],
+  entries: { text: string }[],
   targetLanguage: string,
-  userApiKey: string, // Menerima API Key dari input user di App.tsx
-  retryCount = 0
+  apiKey: string // Sekarang menerima API Key dari input user
 ): Promise<string[]> => {
-  
-  // Inisialisasi menggunakan API Key yang diberikan user
-  const genAI = new GoogleGenerativeAI(userApiKey);
-  
-  // Menggunakan gemini-1.5-flash (lebih cepat dan stabil untuk subtitle)
-  const model = genAI.getGenerativeModel({ 
-    model: "gemini-1.5-flash",
-    generationConfig: {
-        responseMimeType: "application/json",
-    }
-  });
+  const genAI = new GoogleGenerativeAI(apiKey);
+  const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
   const prompt = `You are a professional movie subtitle translator. 
-  Translate these subtitles into ${targetLanguage}.
+  Translate the following subtitle lines into ${targetLanguage}.
   
   STRICT RULES:
-  1. Use NATURAL, CONVERSATIONAL, and INFORMAL language (Slang is encouraged where appropriate).
-  2. DO NOT translate word-for-word. Capture the emotion and context of the dialogue.
-  3. If it's a joke or idiom, find an equivalent expression in ${targetLanguage}.
-  4. Keep the translation concise to fit subtitle timing.
-  5. Return ONLY a JSON array of strings.
-
+  1. Use NATURAL, CONVERSATIONAL, and INFORMAL language (Slang is okay if context fits).
+  2. DO NOT be literal. Translate the MEANING, not just words.
+  3. Maintain the emotional tone of the scene.
+  4. Return ONLY a JSON array of strings in the exact same order.
+  
   Subtitles to translate:
   ${JSON.stringify(entries.map(e => e.text))}`;
 
   try {
-    // Jeda 2 detik untuk menghindari Rate Limit
-    await sleep(2000); 
-
+    await sleep(2000); // Delay agar tidak limit
     const result = await model.generateContent(prompt);
     const response = await result.response;
-    const text = response.text().trim();
+    const text = response.text();
     
-    // Parsing hasil JSON dari Gemini
-    const translatedTexts: string[] = JSON.parse(text);
-    
-    return translatedTexts;
-
-  } catch (error: any) {
-    // Penanganan Rate Limit (Error 429)
-    if (error?.status === 429 && retryCount < 3) {
-       console.warn(`Rate limit reached. Retrying (${retryCount + 1}/3)...`);
-       await sleep(5000); 
-       return translateBatch(entries, targetLanguage, userApiKey, retryCount + 1);
-    }
-
-    console.error("Gemini Translation Error:", error);
-    throw new Error("Translation failed. The AI is busy or the API Key is invalid. Please wait a moment.");
+    // Membersihkan string jika AI memberikan markdown ```json
+    const cleanJson = text.replace(/```json|```/g, "");
+    return JSON.parse(cleanJson);
+  } catch (error) {
+    console.error("Translation Error:", error);
+    throw error;
   }
 };
