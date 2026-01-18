@@ -16,10 +16,14 @@ export const translateBatch = async (
   
   const model = ai.models.generateContent({
     model: 'gemini-3-flash-preview',
-    contents: `Translate the following subtitle lines into ${targetLanguage}. 
-    Return ONLY the translations as a JSON array of strings in the exact same order. 
-    Maintain the emotional tone and context of the conversation.
-    
+    contents: `You are a professional movie subtitle translator.
+    Translate the following subtitle lines into ${targetLanguage}.
+    STRICT RULES:
+    1. Use natural, conversational, and informal language (Spoken language).
+    2. Maintain the emotional tone and context of the scene.
+    3. If it's a joke, translate it to an equivalent joke in ${targetLanguage}.
+    4. Keep the length of the translation similar to the original to fit the screen.
+    5. Return ONLY a JSON array of strings.
     Subtitles:
     ${entries.map((e, i) => `${i}: ${e.text}`).join('\n')}`,
     config: {
