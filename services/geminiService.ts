@@ -10,13 +10,13 @@ export const translateBatch = async (
   userApiKey: string, // Menerima API Key dari input user di App.tsx
   retryCount = 0
 ): Promise<string[]> => {
-  
+
   // Inisialisasi menggunakan API Key yang diberikan user
   const genAI = new GoogleGenerativeAI(userApiKey);
   
-  // Menggunakan gemini-1.5-flash (lebih cepat dan stabil untuk subtitle)
+  // Menggunakan gemini
   const model = genAI.getGenerativeModel({ 
-    model: "gemini-1.5-flash",
+    model: "gemini-3-flash-preview",
     generationConfig: {
         responseMimeType: "application/json",
     }
