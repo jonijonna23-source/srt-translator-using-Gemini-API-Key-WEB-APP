@@ -1,5 +1,4 @@
-
-import React, { useState, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   Upload, 
   FileText, 
@@ -8,18 +7,23 @@ import {
   CheckCircle2, 
   AlertCircle,
   Loader2,
-  Globe,
-  ArrowRight
+  Globe2, // Logo baru yang lebih menarik
+  ArrowRight,
+  RefreshCw,
+  Edit3,
+  Sparkles // Logo tambahan untuk kesan AI
 } from 'lucide-react';
 import { parseSrt, stringifySrt, chunkEntries } from './services/srtService';
 import { translateBatch } from './services/geminiService';
-import { SrtEntry, TranslationState, LANGUAGES, Language } from './types';
+import { SrtEntry, TranslationState, LANGUAGES } from './types';
 
 const App: React.FC = () => {
   const [file, setFile] = useState<File | null>(null);
   const [originalEntries, setOriginalEntries] = useState<SrtEntry[]>([]);
   const [translatedEntries, setTranslatedEntries] = useState<SrtEntry[]>([]);
   const [targetLang, setTargetLang] = useState<string>(LANGUAGES[0].name);
+  const [apiKey, setApiKey] = useState<string>(localStorage.getItem('gemini_api_key') || '');
+
   const [status, setStatus] = useState<TranslationState>({
     isTranslating: false,
     progress: 0,
@@ -29,7 +33,9 @@ const App: React.FC = () => {
     completed: false
   });
 
-  const abortControllerRef = useRef<AbortController | null>(null);
+  useEffect(() => {
+    localStorage.setItem('gemini_api_key', apiKey);
+  }, [apiKey]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
@@ -52,8 +58,34 @@ const App: React.FC = () => {
     }
   };
 
+  const handleClear = () => {
+    setFile(null);
+    setOriginalEntries([]);
+    setTranslatedEntries([]);
+    setStatus({
+      isTranslating: false,
+      progress: 0,
+      totalBatches: 0,
+      currentBatch: 0,
+      error: null,
+      completed: false
+    });
+    const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
+    if (fileInput) fileInput.value = "";
+  };
+
+  const handleManualEdit = (index: number, newText: string) => {
+    const updated = [...translatedEntries];
+    updated[index] = { ...updated[index], text: newText };
+    setTranslatedEntries(updated);
+  };
+
   const startTranslation = async () => {
     if (originalEntries.length === 0) return;
+    if (!apiKey) {
+      alert("Please enter your Gemini API Key in the configuration box!");
+      return;
+    }
 
     setStatus({
       isTranslating: true,
@@ -79,11 +111,11 @@ const App: React.FC = () => {
         }));
 
         const batch = batches[i];
-        const translatedTexts = await translateBatch(batch, targetLang);
+        const translatedTexts = await translateBatch(batch, targetLang, apiKey);
 
         const translatedBatch: SrtEntry[] = batch.map((entry, idx) => ({
           ...entry,
-          text: translatedTexts[idx] || entry.text // Fallback to original if missing
+          text: translatedTexts[idx] || entry.text
         }));
 
         results.push(...translatedBatch);
@@ -100,7 +132,7 @@ const App: React.FC = () => {
       setStatus(prev => ({ 
         ...prev, 
         isTranslating: false, 
-        error: err.message || "An unexpected error occurred during translation."
+        error: err.message || "An error occurred during translation."
       }));
     }
   };
@@ -120,163 +152,168 @@ const App: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col items-center py-12 px-4 sm:px-6 lg:px-8">
-      {/* Header */}
+    <div className="min-h-screen flex flex-col items-center py-12 px-4 sm:px-6 lg:px-8 bg-[#f8fafc]">
+      {/* 3. Logo & Header */}
       <div className="max-w-4xl w-full text-center mb-12">
-        <div className="inline-flex items-center justify-center p-3 bg-indigo-100 rounded-2xl mb-4">
-          <Globe className="w-8 h-8 text-indigo-600" />
+        <div className="relative inline-flex items-center justify-center p-4 bg-gradient-to-tr from-indigo-600 to-violet-500 rounded-3xl mb-6 shadow-xl shadow-indigo-200/50">
+          <Globe2 className="w-10 h-10 text-white" />
+          <Sparkles className="w-5 h-5 text-yellow-300 absolute -top-1 -right-1 animate-pulse" />
         </div>
-        <h1 className="text-4xl font-extrabold text-slate-900 tracking-tight mb-2">
+        <h1 className="text-4xl font-black text-slate-900 tracking-tight mb-2">
           Gemini SRT Translator
         </h1>
-        <p className="text-lg text-slate-600">
-          Translate your subtitle files with the power of Google Gemini AI.
-        </p>
+        <p className="text-lg text-slate-500 font-medium">Elevate your subtitles with AI-powered natural translation.</p>
       </div>
 
-      <div className="max-w-xl w-full space-y-8">
-        {/* Step 1: Upload and Language Selection */}
-        <div className="bg-white p-8 rounded-3xl shadow-xl shadow-slate-200/50 border border-slate-100">
-          <div className="flex items-center gap-3 mb-6">
-            <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center font-bold text-slate-600">1</div>
-            <h2 className="text-xl font-bold text-slate-800">Upload & Configure</h2>
+      <div className="max-w-2xl w-full space-y-8">
+        <div className="bg-white p-8 rounded-[2rem] shadow-2xl shadow-slate-200/60 border border-slate-100">
+          <div className="flex items-center gap-3 mb-8">
+            <div className="w-8 h-8 rounded-xl bg-indigo-50 flex items-center justify-center font-bold text-indigo-600">1</div>
+            <h2 className="text-xl font-bold text-slate-800">Configuration</h2>
           </div>
 
           <div className="space-y-6">
-            {/* Language Selector */}
+            {/* API KEY INPUT */}
             <div className="space-y-2">
-              <label className="block text-sm font-medium text-slate-700">Target Language</label>
+              <label className="block text-sm font-semibold text-slate-700 ml-1">Gemini API Key</label>
+              <input 
+                type="password"
+                value={apiKey}
+                onChange={(e) => setApiKey(e.target.value)}
+                placeholder="Paste your API Key here..."
+                className="w-full px-5 py-4 border-slate-200 focus:ring-4 focus:ring-indigo-50 focus:border-indigo-500 rounded-2xl bg-slate-50/50 text-sm transition-all outline-none"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <label className="block text-sm font-semibold text-slate-700 ml-1">Target Language</label>
               <div className="relative">
                 <select 
                   value={targetLang}
                   onChange={(e) => setTargetLang(e.target.value)}
-                  className="block w-full pl-4 pr-10 py-3 text-base border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 rounded-xl transition-all appearance-none bg-slate-50"
-                  disabled={status.isTranslating}
+                  className="block w-full px-5 py-4 border-slate-200 focus:ring-4 focus:ring-indigo-50 focus:border-indigo-500 rounded-2xl bg-slate-50/50 appearance-none outline-none transition-all"
                 >
                   {LANGUAGES.map((lang) => (
-                    <option key={lang.code} value={lang.name}>
-                      {lang.name}
-                    </option>
+                    <option key={lang.code} value={lang.name}>{lang.name}</option>
                   ))}
                 </select>
-                <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-slate-400">
-                  <Settings className="w-5 h-5" />
-                </div>
+                <Settings className="w-5 h-5 absolute right-4 top-4 text-slate-400 pointer-events-none" />
               </div>
             </div>
 
-            {/* File Input */}
-            <div 
-              className={`relative border-2 border-dashed rounded-2xl p-8 transition-all text-center
-                ${file ? 'border-indigo-300 bg-indigo-50/30' : 'border-slate-200 hover:border-indigo-400 hover:bg-slate-50'}`}
-            >
-              <input
-                type="file"
-                accept=".srt"
-                onChange={handleFileChange}
-                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                disabled={status.isTranslating}
-              />
+            <div className={`relative border-2 border-dashed rounded-2xl p-10 text-center transition-all duration-300 ${file ? 'border-indigo-300 bg-indigo-50/20' : 'border-slate-200 hover:border-indigo-400 hover:bg-slate-50'}`}>
+              <input type="file" accept=".srt" onChange={handleFileChange} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" disabled={status.isTranslating} />
               <div className="flex flex-col items-center">
                 {file ? (
                   <>
-                    <FileText className="w-12 h-12 text-indigo-500 mb-3" />
-                    <p className="text-sm font-semibold text-slate-900 truncate max-w-xs">{file.name}</p>
-                    <p className="text-xs text-slate-500 mt-1">{(file.size / 1024).toFixed(1)} KB • {originalEntries.length} lines</p>
+                    <FileText className="w-14 h-14 text-indigo-500 mb-3" />
+                    <p className="text-sm font-bold text-slate-900 truncate max-w-[250px]">{file.name}</p>
+                    <p className="text-xs text-slate-500 mt-1 font-medium">{originalEntries.length} Lines detected</p>
                   </>
                 ) : (
                   <>
-                    <Upload className="w-12 h-12 text-slate-400 mb-3" />
-                    <p className="text-sm font-medium text-slate-700">Click or drag your .srt file here</p>
-                    <p className="text-xs text-slate-500 mt-1">Only .srt format is supported</p>
+                    <Upload className="w-14 h-14 text-slate-300 mb-3" />
+                    <p className="text-sm font-bold text-slate-700">Drop your .srt file here</p>
+                    <p className="text-xs text-slate-400 mt-1">Maximum precision translation</p>
                   </>
                 )}
               </div>
             </div>
 
-            <button
-              onClick={startTranslation}
-              disabled={!file || status.isTranslating || originalEntries.length === 0}
-              className={`w-full flex items-center justify-center gap-2 py-4 px-6 rounded-xl font-bold text-white transition-all transform active:scale-[0.98]
-                ${!file || status.isTranslating || originalEntries.length === 0 
-                  ? 'bg-slate-300 cursor-not-allowed' 
-                  : 'bg-indigo-600 hover:bg-indigo-700 shadow-lg shadow-indigo-200'}`}
-            >
-              {status.isTranslating ? (
-                <>
-                  <Loader2 className="w-5 h-5 animate-spin" />
-                  Translating {status.currentBatch} / {status.totalBatches}
-                </>
-              ) : (
-                <>
-                  Start Translation
-                  <ArrowRight className="w-5 h-5" />
-                </>
+            {/* 2. Tombol Start & Change File Berdampingan */}
+            <div className="flex gap-3">
+              <button
+                onClick={startTranslation}
+                disabled={!file || status.isTranslating || originalEntries.length === 0}
+                className={`flex-1 flex items-center justify-center gap-2 py-4 rounded-2xl font-bold text-white transition-all active:scale-[0.98] ${!file || status.isTranslating ? 'bg-slate-200 text-slate-400' : 'bg-indigo-600 hover:bg-indigo-700 shadow-lg shadow-indigo-100'}`}
+              >
+                {status.isTranslating ? <><Loader2 className="w-5 h-5 animate-spin" /> {status.progress}%</> : <><ArrowRight className="w-5 h-5" /> Start Translation</>}
+              </button>
+
+              {file && !status.isTranslating && (
+                <button
+                  onClick={handleClear}
+                  className="px-6 py-4 rounded-2xl font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 transition-all flex items-center gap-2"
+                >
+                  <RefreshCw className="w-5 h-5" /> Change File
+                </button>
               )}
-            </button>
+            </div>
           </div>
         </div>
 
-        {/* Step 2: Progress and Download */}
+        {/* STEP 2: RESULTS */}
         {(status.isTranslating || status.completed || status.error) && (
-          <div className="bg-white p-8 rounded-3xl shadow-xl shadow-slate-200/50 border border-slate-100 animate-in fade-in slide-in-from-bottom-4">
-            <div className="flex items-center gap-3 mb-6">
-              <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center font-bold text-slate-600">2</div>
-              <h2 className="text-xl font-bold text-slate-800">Results</h2>
+          <div className="bg-white p-8 rounded-[2rem] shadow-2xl shadow-slate-200/60 border border-slate-100 animate-in fade-in slide-in-from-bottom-4">
+            <div className="flex items-center gap-3 mb-8">
+              <div className="w-8 h-8 rounded-xl bg-slate-50 flex items-center justify-center font-bold text-slate-600">2</div>
+              <h2 className="text-xl font-bold text-slate-800">Translation Results</h2>
             </div>
 
             <div className="space-y-6">
-              {/* Progress Bar */}
               {status.isTranslating && (
-                <div className="space-y-3">
-                  <div className="flex justify-between text-sm font-medium">
-                    <span className="text-slate-600">Translation Progress</span>
-                    <span className="text-indigo-600 font-bold">{status.progress}%</span>
+                <div className="space-y-4">
+                  <div className="flex justify-between text-sm font-bold">
+                    <span className="text-slate-500">Processing Batches...</span>
+                    <span className="text-indigo-600">{status.progress}%</span>
                   </div>
-                  <div className="w-full bg-slate-100 rounded-full h-3 overflow-hidden">
-                    <div 
-                      className="bg-indigo-600 h-full transition-all duration-500 ease-out"
-                      style={{ width: `${status.progress}%` }}
-                    />
+                  <div className="w-full bg-slate-100 rounded-full h-4 overflow-hidden p-1">
+                    <div className="bg-indigo-600 h-full rounded-full transition-all duration-500 shadow-sm" style={{ width: `${status.progress}%` }} />
                   </div>
-                  <p className="text-xs text-slate-500 text-center italic">
-                    Processing batch {status.currentBatch} of {status.totalBatches}...
-                  </p>
                 </div>
               )}
 
-              {/* Completion Message */}
               {status.completed && (
-                <div className="bg-emerald-50 border border-emerald-100 rounded-2xl p-6 flex items-start gap-4">
-                  <CheckCircle2 className="w-6 h-6 text-emerald-500 shrink-0 mt-0.5" />
-                  <div>
-                    <h3 className="text-emerald-900 font-bold">Translation Finished!</h3>
-                    <p className="text-emerald-700 text-sm mt-1">Successfully translated {originalEntries.length} lines into {targetLang}.</p>
-                    <button
-                      onClick={downloadFile}
-                      className="mt-4 inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 px-6 rounded-xl transition-all shadow-md shadow-emerald-100"
-                    >
-                      <Download className="w-5 h-5" />
-                      Download Translated File
+                <div className="space-y-8">
+                  <div className="bg-emerald-50/50 border border-emerald-100 rounded-[1.5rem] p-8 flex flex-col items-center text-center">
+                    <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mb-4">
+                      <CheckCircle2 className="w-8 h-8 text-emerald-600" />
+                    </div>
+                    <h3 className="text-emerald-900 font-black text-xl mb-1">Success!</h3>
+                    <p className="text-emerald-700 text-sm font-medium mb-6">Translation complete. Review the lines below before downloading.</p>
+                    
+                    <button onClick={downloadFile} className="w-full sm:w-auto flex items-center justify-center gap-2 bg-emerald-600 text-white font-bold py-4 px-10 rounded-2xl hover:bg-emerald-700 shadow-lg shadow-emerald-100 transition-all active:scale-[0.95]">
+                      <Download className="w-5 h-5" /> Download .srt File
                     </button>
+                  </div>
+
+                  <div className="border border-slate-100 rounded-[1.5rem] overflow-hidden shadow-inner bg-slate-50 max-h-[600px] overflow-y-auto">
+                    <table className="w-full text-left text-sm border-collapse">
+                      <thead className="bg-white border-b sticky top-0 z-10">
+                        <tr>
+                          <th className="p-4 font-bold text-slate-400 uppercase tracking-wider text-[10px] w-1/2">Original</th>
+                          <th className="p-4 font-bold text-indigo-600 uppercase tracking-wider text-[10px] w-1/2 flex items-center gap-2">
+                            <Edit3 className="w-3 h-3" /> Translated (Editable)
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {translatedEntries.map((entry, i) => (
+                          <tr key={i} className="border-b border-slate-50 hover:bg-white transition-colors">
+                            <td className="p-4 text-slate-500 leading-relaxed">{originalEntries[i]?.text}</td>
+                            <td className="p-3">
+                              <textarea 
+                                className="w-full p-3 bg-white border border-slate-100 rounded-xl focus:ring-2 focus:ring-indigo-100 focus:border-indigo-400 outline-none text-slate-700 transition-all resize-none font-medium leading-relaxed"
+                                value={entry.text}
+                                onChange={(e) => handleManualEdit(i, e.target.value)}
+                                rows={2}
+                              />
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
                   </div>
                 </div>
               )}
 
-              {/* Error Message */}
               {status.error && (
-                <div className="bg-rose-50 border border-rose-100 rounded-2xl p-6 flex items-start gap-4">
-                  <AlertCircle className="w-6 h-6 text-rose-500 shrink-0 mt-0.5" />
-                  <div>
-                    <h3 className="text-rose-900 font-bold">Translation Failed</h3>
-                    <p className="text-rose-700 text-sm mt-1">{status.error}</p>
-                    <button
-                      onClick={startTranslation}
-                      className="mt-4 text-rose-600 font-bold text-sm hover:underline"
-                    >
-                      Try Again
-                    </button>
+                <div className="bg-rose-50 border border-rose-100 rounded-[1.5rem] p-8 flex flex-col items-center gap-4 text-center">
+                  <div className="w-12 h-12 bg-rose-100 rounded-full flex items-center justify-center">
+                    <AlertCircle className="w-6 h-6 text-rose-600" />
                   </div>
+                  <p className="text-rose-800 font-bold">{status.error}</p>
+                  <button onClick={startTranslation} className="text-rose-600 font-bold hover:text-rose-700 underline underline-offset-4 transition-all">Retry Translation</button>
                 </div>
               )}
             </div>
@@ -284,10 +321,8 @@ const App: React.FC = () => {
         )}
       </div>
 
-      {/* Footer Info */}
-      <footer className="mt-12 text-slate-400 text-sm max-w-xl text-center space-y-1">
-        <p>This tool translates subtitles in batches of 10 lines to ensure accuracy and speed.</p>
-        <p>© 2024 Built with Gemini 3 Flash and React.</p>
+      <footer className="mt-16 text-slate-400 text-[11px] font-bold uppercase tracking-[0.2em] text-center">
+        © 2026 Gemini Subtitle Engine • 1.5 Flash
       </footer>
     </div>
   );
