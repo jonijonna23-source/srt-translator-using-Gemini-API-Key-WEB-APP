@@ -168,9 +168,26 @@ const App: React.FC = () => {
               </div>
             )}
             
-            <div className="w-full bg-slate-100 h-3 rounded-full overflow-hidden mb-6">
-              <div className="bg-indigo-600 h-full transition-all duration-500" style={{ width: `${status.progress}%` }} />
+            <div className="space-y-3 mb-6">
+              <div className="flex justify-between items-end px-1">
+                <div className="flex flex-col">
+                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Translation Progress</span>
+                  <span className="text-sm font-bold text-slate-700">
+                    Batch {status.currentBatch} <span className="text-slate-300 mx-1">/</span> {status.totalBatches}
+                  </span>
+                </div>
+                <div className="text-3xl font-black text-indigo-600 tabular-nums">
+                  {status.progress}<span className="text-sm ml-0.5">%</span>
+                </div>
+              </div>
+
+            <div className="w-full bg-slate-100 h-4 rounded-full overflow-hidden shadow-inner border border-slate-200/50">
+              <div 
+                className="bg-indigo-600 h-full transition-all duration-500 ease-out shadow-[0_0_15px_rgba(79,70,229,0.4)]" 
+                style={{ width: `${status.progress}%` }} 
+              />
             </div>
+          </div>
             
             {translatedEntries.length > 0 && (
               <div className="flex flex-col sm:flex-row gap-3 mb-6">
