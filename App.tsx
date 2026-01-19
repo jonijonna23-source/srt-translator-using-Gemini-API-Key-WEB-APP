@@ -66,7 +66,7 @@ const App: React.FC = () => {
     isStopping.current = false;
     setStatus({ isTranslating: true, progress: 0, totalBatches: 0, currentBatch: 0, error: null, completed: false });
 
-    const batches = chunkEntries(originalEntries, 15);
+    const batches = chunkEntries(originalEntries, 10); // Membagi menjadi batch berisi 10 entri 
     const totalBatches = batches.length;
     setStatus(prev => ({ ...prev, totalBatches }));
 
@@ -129,7 +129,7 @@ const App: React.FC = () => {
           <Sparkles className="w-5 h-5 text-yellow-300 absolute -top-1 -right-1 animate-pulse" />
         </div>
         <h1 className="text-4xl font-black text-slate-900 mb-2">Gemini SRT Translator</h1>
-        <p className="text-slate-500 font-medium">Model: Gemini 3 Flash Preview</p>
+        <p className="text-slate-500 font-medium">Model: Gemini</p>
       </div>
 
       <div className="max-w-2xl w-full space-y-8">

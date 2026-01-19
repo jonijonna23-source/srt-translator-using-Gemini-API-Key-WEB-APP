@@ -14,7 +14,7 @@
 <hr />
 
 ### 🚀 Overview
-**Gemini SRT Translator** is a specialized web application built to translate `.srt` subtitle files. It uses **Google Gemini 3 Flash** to deliver natural, conversational translations while managing API rate limits through an automated batching system.
+**Gemini SRT Translator** is a specialized web application built to translate `.srt` subtitle files. It uses **Google Gemini** to deliver natural, conversational translations while managing API rate limits through an automated batching system.
 
 ---
 

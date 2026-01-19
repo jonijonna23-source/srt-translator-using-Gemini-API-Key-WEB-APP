@@ -16,7 +16,7 @@ export const translateBatch = async (
   
   // Menggunakan gemini
   const model = genAI.getGenerativeModel({ 
-    model: "gemini-3-flash-preview",
+    model: "gemini-2.5-flash",
     generationConfig: {
         responseMimeType: "application/json",
     }
@@ -26,7 +26,7 @@ export const translateBatch = async (
   Translate these subtitles into ${targetLanguage}.
   
   STRICT RULES:
-  1. Use NATURAL, CONVERSATIONAL, and INFORMAL language (Slang is encouraged where appropriate).
+  1. Use NATURAL, CONVERSATIONAL, and INFORMAL language.
   2. DO NOT translate word-for-word. Capture the emotion and context of the dialogue.
   3. If it's a joke or idiom, find an equivalent expression in ${targetLanguage}.
   4. Keep the translation concise to fit subtitle timing.
